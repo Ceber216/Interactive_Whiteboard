@@ -1,4 +1,4 @@
-# InteractiveWhiteboard_]Project
+# InteractiveWhiteboard_Project
 
 A multiplayer collaborate whiteboard application build with Python, Tkinker and WebSockets/TCP
 
