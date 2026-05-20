@@ -9,8 +9,30 @@ def setup():
     socket_server.connect(('127.0.0.1',8888))
     return socket_server
 
+def cursor_mechanic(canvas,remote_cursor,line):
+    parts = line.split(',')
+    if len(parts) == 4:
+        client_name = parts[1]
+        if client_name in remote_cursor:
+            old_oval, old_text = remote_cursor[client_name]
+            canvas.delete(old_oval)
+            canvas.delete(old_text)
+        new_oval = canvas.create_oval(int(parts[2]) - 4, int(parts[3]) - 4, int(parts[2]) + 4, int(parts[3]) + 4,
+                                      fill="red")
+        new_text = canvas.create_text(int(parts[2]), int(parts[3]) - 12, text=client_name, fill="black",
+                                      font=("Arial", 9))
+        remote_cursor[client_name] = new_oval, new_text
 
-def receive_messanges(client_socket,canvas,my_color,remote_cursor):
+def create_line(canvas,line):
+    coords = line.split(',')
+    if len(coords) == 7:
+        try:
+            x1, y1, x2, y2 = map(int, coords[3:])
+            canvas.create_line(x1, y1, x2, y2, fill=coords[0], width=int(coords[2]), capstyle="round")
+        except ValueError:
+            return
+
+def receive_messages(client_socket,canvas,my_color,remote_cursor):
     buffor = ""
     try:
         while True:
@@ -26,24 +48,9 @@ def receive_messanges(client_socket,canvas,my_color,remote_cursor):
                     elif line.startswith("MY_COLOR",):
                         my_color[0] = line.split(",")[1]
                     elif line.startswith("CURSOR,"):
-                        parts = line.split(',')
-                        if len(parts) == 4:
-                            client_name = parts[1]
-                            if client_name in remote_cursor:
-                                old_oval,old_text = remote_cursor[client_name]
-                                canvas.delete(old_oval)
-                                canvas.delete(old_text)
-                            new_oval = canvas.create_oval(int(parts[2])-4,int(parts[3]) - 4,int(parts[2])+4,int(parts[3])+4,fill="red")
-                            new_text = canvas.create_text(int(parts[2]),int(parts[3])-12,text=client_name,fill="black",font = ("Arial", 9))
-                            remote_cursor[client_name] = new_oval,new_text
+                        cursor_mechanic(canvas,remote_cursor,line)
                     elif line:
-                        coords = line.split(',')
-                        if len(coords) == 7:
-                            try:
-                                x1, y1, x2, y2 = map(int, coords[3:])
-                                canvas.create_line(x1, y1, x2, y2, fill=coords[0], width=int(coords[2]),capstyle="round")
-                            except ValueError:
-                                continue
+                        create_line(canvas,line)
 
     except ConnectionResetError:
         print("Connection terminated")
@@ -75,6 +82,21 @@ def clear_all(my_socket,canvas):
 def undo_previous(my_socket):
     my_socket.sendall("UNDO\n".encode('utf-8'))
 
+def canvas_mechanic(root,my_socket,my_color,remote_cursor,mouse_pos,stroke,name):
+    gauge = tkinter.IntVar(value=2)
+    canvas = tkinter.Canvas(root, width=800, height=600, bg='white')
+    slider = tkinter.Scale(root, from_=1, to=20, orient='horizontal', resolution=1, variable=gauge)
+    canvas.pack()
+    slider.pack()
+    canvas.focus_set()
+    threading.Thread(target=receive_messages, args=(my_socket, canvas, my_color, remote_cursor), daemon=True).start()
+    canvas.bind("<Button-1>", lambda e: save_position(e, mouse_pos, stroke))
+    canvas.bind("<B1-Motion>", lambda e: draw_and_send(e, mouse_pos, canvas, my_socket, stroke, my_color, gauge))
+    canvas.bind("<Motion>", lambda e: send_cursor(e, name, my_socket))
+    canvas.bind("<c>", lambda e: clear_all(my_socket, canvas))
+    canvas.bind("<z>", lambda e: undo_previous(my_socket))
+    root.mainloop()
+
 def client_main():
     root = tkinter.Tk()
     name = simpledialog.askstring("Create your name","Write your name here:",initialvalue="Anonim")
@@ -83,18 +105,6 @@ def client_main():
     my_color = ["black"]
     stroke = [0]
     my_socket = setup()
-    gauge = tkinter.IntVar(value = 2)
-    canvas = tkinter.Canvas(root,width=800,height=600,bg = 'white')
-    slider = tkinter.Scale(root,from_ = 1, to = 20, orient='horizontal',resolution = 1, variable = gauge)
-    canvas.pack()
-    slider.pack()
-    canvas.focus_set()
-    threading.Thread(target=receive_messanges, args=(my_socket, canvas,my_color,remote_cursor), daemon=True).start()
-    canvas.bind("<Button-1>",lambda e: save_position(e,mouse_pos,stroke))
-    canvas.bind("<B1-Motion>",lambda e: draw_and_send(e,mouse_pos,canvas,my_socket,stroke,my_color,gauge))
-    canvas.bind("<Motion>", lambda e: send_cursor(e, name,my_socket))
-    canvas.bind("<c>",lambda e: clear_all(my_socket,canvas))
-    canvas.bind("<z>",lambda e: undo_previous(my_socket))
-    root.mainloop()
+    canvas_mechanic(root,my_socket,my_color,remote_cursor,mouse_pos,stroke,name)
 if __name__ == "__main__":
     client_main()
