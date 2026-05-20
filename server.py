@@ -47,6 +47,10 @@ def client_handler(client_socket,active_clients,canvas_history,lock_history,clie
                             history_point = f"{points[1]}\n"
                             new_point = history_point.encode('utf-8')
                             client.sendall(new_point)
+                elif line.startswith("CURSOR,"):
+                    for clients in active_clients:
+                        if clients != client_socket:
+                            clients.sendall(f"{line}\n".encode('utf-8'))
                 else:
                     my_color = client_colors[client_socket]
                     line_with_color = f"{my_color},{line}"

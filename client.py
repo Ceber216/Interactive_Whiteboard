@@ -1,6 +1,8 @@
 import socket
 import threading
 import tkinter
+from tkinter import simpledialog
+
 
 def setup():
     socket_server = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
@@ -8,7 +10,7 @@ def setup():
     return socket_server
 
 
-def receive_messanges(client_socket,canvas,my_color):
+def receive_messanges(client_socket,canvas,my_color,remote_cursor):
     buffor = ""
     try:
         while True:
@@ -23,6 +25,17 @@ def receive_messanges(client_socket,canvas,my_color):
                         canvas.delete("all")
                     elif line.startswith("MY_COLOR",):
                         my_color[0] = line.split(",")[1]
+                    elif line.startswith("CURSOR,"):
+                        parts = line.split(',')
+                        if len(parts) == 4:
+                            client_name = parts[1]
+                            if client_name in remote_cursor:
+                                old_oval,old_text = remote_cursor[client_name]
+                                canvas.delete(old_oval)
+                                canvas.delete(old_text)
+                            new_oval = canvas.create_oval(int(parts[2])-4,int(parts[3]) - 4,int(parts[2])+4,int(parts[3])+4,fill="red")
+                            new_text = canvas.create_text(int(parts[2]),int(parts[3])-12,text=client_name,fill="black",font = ("Arial", 9))
+                            remote_cursor[client_name] = new_oval,new_text
                     elif line:
                         coords = line.split(',')
                         if len(coords) == 7:
@@ -52,6 +65,9 @@ def draw_and_send(event,mouse_pos,canvas,my_socket,stroke,my_color,gauge):
     mouse_pos['x'] = event.x
     mouse_pos['y'] = event.y
 
+def send_cursor(event,name,my_socket):
+    my_socket.sendall(f"CURSOR,{name},{event.x},{event.y}\n".encode('utf-8'))
+
 def clear_all(my_socket,canvas):
     canvas.delete("all")
     my_socket.sendall("CLEAR\n".encode('utf-8'))
@@ -61,6 +77,8 @@ def undo_previous(my_socket):
 
 def client_main():
     root = tkinter.Tk()
+    name = simpledialog.askstring("Create your name","Write your name here:",initialvalue="Anonim")
+    remote_cursor = {}
     mouse_pos = {'x': None, 'y': None}
     my_color = ["black"]
     stroke = [0]
@@ -71,9 +89,10 @@ def client_main():
     canvas.pack()
     slider.pack()
     canvas.focus_set()
-    threading.Thread(target=receive_messanges, args=(my_socket, canvas,my_color), daemon=True).start()
+    threading.Thread(target=receive_messanges, args=(my_socket, canvas,my_color,remote_cursor), daemon=True).start()
     canvas.bind("<Button-1>",lambda e: save_position(e,mouse_pos,stroke))
     canvas.bind("<B1-Motion>",lambda e: draw_and_send(e,mouse_pos,canvas,my_socket,stroke,my_color,gauge))
+    canvas.bind("<Motion>", lambda e: send_cursor(e, name,my_socket))
     canvas.bind("<c>",lambda e: clear_all(my_socket,canvas))
     canvas.bind("<z>",lambda e: undo_previous(my_socket))
     root.mainloop()
