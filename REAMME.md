@@ -18,3 +18,6 @@ A multiplayer collaborate whiteboard application build with Python, Tkinker and 
 - **press c** to clear everything on the Whiteboard
 - **press z** to clear the last line you have created
 - when new client joins a Whiteboard the changes of other people will be visible
+- every new client is automatically assigned a unique color by the server 
+- clients can choose a custom nickname upon joining (default to "Anonim")
+- cursors of the clients will be visible in real-time, along with their nicknames
