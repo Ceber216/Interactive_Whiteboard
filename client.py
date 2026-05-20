@@ -82,6 +82,12 @@ def clear_all(my_socket,canvas):
 def undo_previous(my_socket):
     my_socket.sendall("UNDO\n".encode('utf-8'))
 
+def save_all(my_socket):
+    my_socket.sendall("SAVE\n".encode('utf-8'))
+
+def load_all(my_socket):
+    my_socket.sendall("LOAD\n".encode('utf-8'))
+
 def canvas_mechanic(root,my_socket,my_color,remote_cursor,mouse_pos,stroke,name):
     gauge = tkinter.IntVar(value=2)
     canvas = tkinter.Canvas(root, width=800, height=600, bg='white')
@@ -95,6 +101,8 @@ def canvas_mechanic(root,my_socket,my_color,remote_cursor,mouse_pos,stroke,name)
     canvas.bind("<Motion>", lambda e: send_cursor(e, name, my_socket))
     canvas.bind("<c>", lambda e: clear_all(my_socket, canvas))
     canvas.bind("<z>", lambda e: undo_previous(my_socket))
+    canvas.bind("<s>",lambda e: save_all(my_socket))
+    canvas.bind("<l>",lambda e: load_all(my_socket))
     root.mainloop()
 
 def client_main():

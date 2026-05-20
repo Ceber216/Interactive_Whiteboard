@@ -17,6 +17,8 @@ A multiplayer collaborate whiteboard application build with Python, Tkinker and 
 - **hold** left mouse button to create a line (it will be visible to other clients)
 - **press c** to clear everything on the Whiteboard
 - **press z** to clear the last line you have created
+- **press s** to save the current state of the Whiteboard
+- **press l** to load the previous state of the Whiteboard
 - when new client joins a Whiteboard the changes of other people will be visible
 - every new client is automatically assigned a unique color by the server 
 - clients can choose a custom nickname upon joining (default to "Anonim")

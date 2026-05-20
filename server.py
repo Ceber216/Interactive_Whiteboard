@@ -56,6 +56,30 @@ def normal_command(canvas_history,lock_history,active_clients,client_socket,clie
             msg_to = (line_with_color + "\n").encode('utf-8')
             client.sendall(msg_to)
 
+def save_command(canvas_history,lock_history):
+    test_canvas_history = {}
+    with lock_history:
+        test_canvas_history = list(canvas_history)
+    with open("whiteboard.txt","w",encoding='utf-8') as plik:
+        for points in test_canvas_history:
+            plik.write(f"{points[1]}\n")
+
+def load_command(canvas_history, lock_history, active_clients):
+    with open("whiteboard.txt","r",encoding='utf-8') as plik:
+        lines = plik.readlines()
+    prepared_lines = []
+    for line in lines:
+        prepared_lines.append((None,line.strip()))
+    with lock_history:
+        canvas_history.clear()
+        canvas_history.extend(prepared_lines)
+        snapshot = list(canvas_history)
+    for clients in list(active_clients):
+        clients.sendall("CLEAR\n".encode('utf-8'))
+    for clients in list(active_clients):
+        for points in snapshot:
+            clients.sendall(f"{points[1]}\n".encode('utf-8'))
+
 def client_handler(client_socket,active_clients,canvas_history,lock_history,client_colors):
     buffor = ""
     try:
@@ -73,6 +97,10 @@ def client_handler(client_socket,active_clients,canvas_history,lock_history,clie
                     undo_command(canvas_history,lock_history,active_clients,client_socket)
                 elif line.startswith("CURSOR,"):
                     cursor_command(line,active_clients,client_socket)
+                elif line == "SAVE":
+                    save_command(canvas_history,lock_history)
+                elif line == "LOAD":
+                    load_command(canvas_history,lock_history,active_clients)
                 else:
                     normal_command(canvas_history,lock_history,active_clients,client_socket,client_colors,line)
     except ConnectionResetError:
